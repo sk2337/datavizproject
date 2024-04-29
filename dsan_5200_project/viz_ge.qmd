@@ -227,29 +227,85 @@ fig.show()
 Based on the user-defined criteria, neighborhoods with the lowest scores are recommended for Airbnb bookings. This personalized approach helps in making informed decisions, balancing between cost efficiency and guest satisfaction. Users can fine-tune their preferences to find areas that best meet their needs, whether they are looking for the most affordable options or the highest-rated properties.
 
 #### Addition(Average Rating for each host in each area)
+```{python}
+import plotly.graph_objects as go
+import pandas as pd
+df['neighbourhood_cleansed'] = df['neighbourhood_cleansed'].str.split(',').str[0]
 
+def create_figure():
+    neighborhoods = df['neighbourhood_cleansed'].unique()
+    
+    fig = go.Figure()
+    
+    for neighbourhood in neighborhoods:
+        data = df[df['neighbourhood_cleansed'] == neighbourhood]
+        average_rating_by_host = data.groupby('host_name')['average_review_score'].mean().sort_values(ascending=False).head(20)
+        
+        fig.add_trace(
+            go.Bar(
+                x=average_rating_by_host.values,
+                y=average_rating_by_host.index,
+                orientation='h',
+                name=neighbourhood,
+                visible=(neighbourhood == neighborhoods[0]) 
+            )
+        )
+    
+    dropdown_buttons = [
+        {
+            'label': neighbourhood,
+            'method': 'update',
+            'args': [
+                {'visible': [neighbourhood == n for n in neighborhoods]},
+                {'title': f'Review Score by Host in {neighbourhood}'}
+            ]
+        } for neighbourhood in neighborhoods
+    ]
+    
+    fig.update_layout(
+        updatemenus=[{
+            'buttons': dropdown_buttons,
+            'direction': 'down',
+            'showactive': True,
+            'x': 0.9,
+            'xanchor': 'center',
+            'y': 1.5,
+            'yanchor': 'top'
+        }],
+        title=f'Review Score by Host in {neighborhoods[0]}',
+        xaxis_title='Average Review Score',
+        yaxis_title='Host',
+        template='plotly_white' ,
+        height=700 
+    )
+    
+    return fig
+
+fig = create_figure()
+fig.show()
+
+```
 ```{python}
 import ipywidgets as widgets
 import seaborn as sns
 # Top 20
-df['neighbourhood_cleansed'] = df['neighbourhood_cleansed'].str.split(',').str[0]
 
-def plot_neighbourhood(neighbourhood):
-    data = df[df['neighbourhood_cleansed'] == neighbourhood]
-    average_rating_by_host = data.groupby('host_name')['average_review_score'].mean().sort_values(ascending=False).head(20)
+#def plot_neighbourhood(neighbourhood):
+#    data = df[df['neighbourhood_cleansed'] == neighbourhood]
+ #   average_rating_by_host = data.groupby('host_name')['average_review_score'].mean().sort_values(ascending=False).head(20)
     
-    plt.figure()
-    sns.barplot(x=average_rating_by_host.values, y=average_rating_by_host.index, palette='viridis')
-    plt.title(f'Review Score by Host in {neighbourhood}',fontsize = 18)
-    plt.xlabel('Average Review Score',fontsize = 14)
-    plt.ylabel('Host',fontsize = 14)
-    plt.show()
+ #   plt.figure()
+ #   sns.barplot(x=average_rating_by_host.values, #y=average_rating_by_host.index, palette='viridis')
+ #   plt.title(f'Review Score by Host in {neighbourhood}',fontsize = 18)
+ #   plt.xlabel('Average Review Score',fontsize = 14)
+ #   plt.ylabel('Host',fontsize = 14)
+ #   plt.show()
 
 # Dropdown menu for selecting the neighbourhood
-neighbourhoods = df['neighbourhood_cleansed'].unique()
+#neighbourhoods = df['neighbourhood_cleansed'].unique()
 
-widgets.interact(plot_neighbourhood, neighbourhood=widgets.Dropdown(options=neighbourhoods, description="Area:")
-                 ,layout={'width': '50%'},style={'description_width': 'initial'},   )
+#widgets.interact(plot_neighbourhood, neighbourhood=widgets.Dropdown(options=neighbourhoods, description="Area:")
+#                 ,layout={'width': '50%'},style={'description_width': 'initial'},   )
 ```
 
 #  What factors Influencing Airbnb Bookings in Washington D.C. Over the Last 60 Days
@@ -489,7 +545,9 @@ Similar to the previous plot, this map integrates a choropleth display with mark
 After reviewing the data and visualizations concerning Airbnb bookings in Washington D.C. over the last 60 days, it appears that guests prioritize staying in areas with higher population density and more affordable prices. These factors seem to outweigh the importance of average ratings in influencing booking decisions. This trend suggests that visitors value convenience and cost-effectiveness, possibly due to better access to amenities and transport options in denser, more affordable areas, over the perceived quality or reviews of the listings.
 
 
-# Word Cloud
+# What Hosts Want People to Know About Their Listings
+
+In an effort to better understand how hosts describe their offerings on our platform, we've analyzed the 'About' sections from various listings. By extracting key terms and phrases from these descriptions, we've created a visual representation through a word cloud. This visualization highlights the most frequently mentioned features and attributes, giving us a clearer picture of what hosts believe are the most appealing aspects of their properties.
 
 ```{python}
 import pandas as pd
@@ -540,15 +598,22 @@ wordcloud = WordCloud(width = 800, height = 800,
                 min_font_size = 10,mask=mask).generate(text_no_basic_stopwords)
 
 # Display the word cloud
-plt.figure(figsize = (8, 8), facecolor = None) 
+plt.figure(figsize = (7, 7), facecolor = None) 
 plt.imshow(wordcloud) 
 plt.axis("off") 
 plt.tight_layout(pad = 0) 
 plt.show()
 ```
 
+#### Conclusion
 
-# room type and price/rating
+The word cloud generated from the host descriptions really captures what’s valued most in rental listings, with "Washington DC" being a standout. For sure the hosts want people to know where they are. Also, the word "love" popping up frequently suggests that hosts really put heart into their properties, want to create a warm  atmosphere.
+
+Phrases like "fully equipped" and "thoughtfully designed" shine through too, indicating that hosts strive to offer more than just the basics. These terms likely refer to amenities like well stocked kitchens and pleasing decor, crucial for travelers who want a "home away from home." The mention of "travel" ties directly to the guest's needs, hinting that hosts think about what conveniences will make travel smoother.
+
+# Factore analysis 
+
+### room type and price/rating
 
 ```{python}
 import ipywidgets as widgets
@@ -597,7 +662,7 @@ dropdown = widgets.Dropdown(
 widgets.interact(plot_data, metric=dropdown)
 ```
 
-# price and reviews
+### price and reviews
 
 ```{python}
 
@@ -640,13 +705,9 @@ dropdown = widgets.Dropdown(
 widgets.interact(plot_relation, metric=dropdown)
 ```
 
-# review scores by each host, location
 
 
-
-# the hosts have most/least airbnbs
-
-# number of reviews and the review scores
+### the hosts have most/least airbnbs , number of reviews and the review scores
 
 ```{python}
 def plot_graph(graph_type):

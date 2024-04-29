@@ -14,8 +14,6 @@ website:
 
     search: true
     left:
-      - href: about.qmd
-        text: Introduction
       - href: viz_ge.qmd
         text: Home
 
