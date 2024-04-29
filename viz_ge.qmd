@@ -1,0 +1,722 @@
+---
+title: Geo plot
+jupyter: python3
+---
+
+```{python}
+import warnings
+
+# To suppress all warnings
+warnings.filterwarnings('ignore')
+```
+
+```{python}
+import geopandas as gpd
+import plotly.express as px
+import pandas as pd
+```
+
+```{python}
+dc_bound = gpd.read_file("neighbourhoods.geojson")
+df = pd.read_csv("cleaned_data.csv")
+```
+
+```{python}
+df.columns
+```
+
+```{python}
+dc_bound.head()
+```
+
+
+
+```{python}
+# get average rating
+specified_review_score_columns = [
+    'review_scores_rating', 'review_scores_accuracy', 'review_scores_cleanliness',
+    'review_scores_checkin', 'review_scores_communication', 'review_scores_location',
+    'review_scores_value'
+]
+
+# Calculate the average review score across the specified columns
+df['average_review_score'] = df[specified_review_score_columns].mean(axis=1)
+
+# create a new data frame
+neighbourhood_data = df.groupby('neighbourhood_cleansed').agg({
+    'price_num': 'median',
+    'average_review_score':'mean'
+}).reset_index()
+neighbourhood_data['neighbourhood_cleansed'] = neighbourhood_data['neighbourhood_cleansed'].str.split(',').str[0]
+neighbourhood_data.head()
+```
+
+```{python}
+dc_bound['neighbourhood_cleansed'] = dc_bound['neighbourhood']
+
+dc_bound['neighbourhood_cleansed'] = dc_bound['neighbourhood_cleansed'].str.split(',').str[0]
+merged_gdf = dc_bound.merge(neighbourhood_data, on='neighbourhood_cleansed', how='right')
+merged_gdf['neighbourhood_cleansed'] = merged_gdf['neighbourhood_cleansed'].str.split(',').str[0]
+
+merged_gdf.head()
+```
+
+```{python}
+import json
+import matplotlib.pyplot as plt
+geojson_dict = json.loads(dc_bound.to_json())
+geojson_dict['features'][0]['properties']
+```
+
+# Plot for Average Airbnb Price and Review by Neighborhood in DC
+
+```{python}
+import plotly.express as px
+
+# Assuming 'merged_gdf' and 'geojson_dict' are already defined and prepared as shown in the previous steps.
+
+# Create the choropleth map
+fig = px.choropleth_mapbox(
+    merged_gdf,
+    geojson=geojson_dict,
+    locations='neighbourhood_cleansed',  
+    featureidkey='properties.neighbourhood_cleansed',  
+    color='price_num',  
+    color_continuous_scale="tealrose",  
+    mapbox_style="carto-positron",  
+    zoom=10,  
+    center={"lat": 38.9, "lon": -77.03}, 
+    opacity=0.5,  
+    labels={'neighbourhood_cleansed':'Area','price_num': 'Average Price'}, 
+    hover_data={
+        'neighbourhood_cleansed': True,
+        'price_num': ':.2f'
+    }
+)
+fig.update_traces(
+    hovertemplate=(
+        "<b>%{customdata[0]}</b><br>"
+        "<span style='font-size:0.9em;'>Average Price:</span> "
+        "<span style='font-size:0.9em;'><b>$%{customdata[1]:.2f}</b></span><br>"
+    )
+)
+fig.update_layout(
+    hoverlabel=dict(
+        font=dict(
+            family="Courier New, monospace",
+            size=12
+        ),
+        bordercolor='pink',
+        bgcolor='white'
+    ),
+    title='Average Airbnb Price and Review by Neighborhood in DC',
+    margin={"r":0,"t":0,"l":0,"b":0},
+    clickmode='event+select'
+)
+
+fig.show()
+```
+
+```{python}
+import plotly.express as px
+
+# Assuming 'merged_gdf' and 'geojson_dict' are already defined and prepared as shown in the previous steps.
+
+# Create the choropleth map
+fig = px.choropleth_mapbox(
+    merged_gdf,
+    geojson=geojson_dict,
+    locations='neighbourhood_cleansed',  
+    featureidkey='properties.neighbourhood_cleansed',  
+    color='average_review_score',  
+    color_continuous_scale="tealrose",  
+    mapbox_style="carto-positron",  
+    zoom=10,  
+    center={"lat": 38.9, "lon": -77.03}, 
+    opacity=0.5,  
+    labels={'neighbourhood_cleansed':'Area','average_review_score': 'Average Rating'}, 
+    hover_data={
+        'neighbourhood_cleansed': True,
+        'average_review_score': ':.2f'
+    }
+)
+fig.update_traces(
+    hovertemplate=(
+        "<b>%{customdata[0]}</b><br>"
+        "<span style='font-size:0.9em;'>Average Rating:</span> "
+        "<span style='font-size:0.9em;'><b>$%{customdata[1]:.2f}</b></span><br>"
+    )
+)
+fig.update_layout(
+    hoverlabel=dict(
+        font=dict(
+            family="Courier New, monospace",
+            size=12
+        ),
+        bordercolor='pink',
+        bgcolor='white'
+    ),
+    title='Average Airbnb Price and Review by Neighborhood in DC',
+    margin={"r":0,"t":0,"l":0,"b":0},
+    clickmode='event+select'
+)
+
+fig.show()
+```
+
+```{python}
+import plotly.graph_objects as go
+
+# Assuming 'merged_gdf' and 'geojson_dict' are already defined as shown in previous steps.
+
+# Create base figure with map settings
+fig = go.Figure(go.Choroplethmapbox(
+    geojson=geojson_dict,
+    locations=merged_gdf['neighbourhood_cleansed'],  
+    featureidkey='properties.neighbourhood_cleansed',  
+    z=merged_gdf['average_review_score'],  # initial z values, can be changed by dropdown
+    colorscale="tealrose",
+    marker_opacity=0.5,
+    marker_line_width=0,
+    hoverinfo='all'
+))
+
+
+fig.update_layout(
+    mapbox_style="carto-positron",
+    mapbox_zoom=10,
+    mapbox_center={"lat": 38.9, "lon": -77.03},
+    margin={"r":0,"t":0,"l":0,"b":0},
+    title='Average Airbnb Metrics by Neighborhood in DC'
+)
+
+fig.update_layout(
+    hoverlabel=dict(
+        font=dict(
+            family="Courier New, monospace",
+            size=12
+        ),
+        bordercolor='pink',
+        bgcolor='white'
+    ),
+    clickmode='event+select'
+)
+
+#  dropdown buttons
+fig.update_layout(
+    updatemenus=[
+        dict(
+            buttons=[
+                dict(label="Average Review Score",
+                     method="update",
+                     args=[{"z": [merged_gdf['average_review_score']]},
+                           {"title": "Average Airbnb Review Score by Neighborhood in DC"}]),
+                dict(label="Median Price",
+                     method="update",
+                     args=[{"z": [merged_gdf['price_num']]},
+                           {"title": "Median Airbnb Price by Neighborhood in DC"}]),
+            ],
+            direction="down",
+            pad={"r": 10, "t": 10},
+            showactive=True,
+            x=0.9,
+            xanchor="left",
+            y=1.1,
+            yanchor="top"
+        ),
+    ]
+)
+
+fig.update_traces(
+    hovertemplate=(
+        "<b>%{location}</b><br>" +
+        "<span style='font-size:0.9em;'>Value:</span> " +
+        "<span style='font-size:0.9em;'><b>%{z:.2f}</b></span><br>"
+    )
+)
+
+fig.show()
+```
+
+## Population 
+
+```{python}
+# df with only the top ten
+
+df['neighbourhood_cleansed'] = df['neighbourhood_cleansed'].str.split(',').str[0]
+neighbourhood_taken_60_sum = df.groupby('neighbourhood_cleansed')['taken_60'].sum().sort_values(ascending=False)
+
+top_ten_neighbourhoods = neighbourhood_taken_60_sum.head(10)
+names_only = top_ten_neighbourhoods.index
+top_neighbourhoods = list(names_only)
+df_withtop_10 = df[df['neighbourhood_cleansed'].isin(top_neighbourhoods)]
+```
+
+```{python}
+# Grouping data by 'neighbourhood_cleansed' and calculating mean for price, latitude, and longitude
+data_for_pop = df_withtop_10.groupby('neighbourhood_cleansed').agg({
+    'price_num': 'mean',
+    'latitude': 'mean',
+    'longitude': 'mean'
+}).reset_index()
+
+data_for_pop.head()
+```
+
+```{python}
+dc_wards = gpd.read_file("data/ACS_Demographic_Characteristics_DC_Ward.geojson")[
+    ["NAMELSAD", "DP05_0001E", "geometry"]
+]
+```
+
+# Plot for Top 10 Neighbourhoods by Total Days Booked in 60 Days
+
+```{python}
+import seaborn as sns
+import matplotlib.pyplot as plt
+plt.figure(figsize=(12, 8))
+ax = sns.barplot(x=neighbourhood_taken_60_sum.head(10).index, y=neighbourhood_taken_60_sum.head(10).values, palette="Blues_d")
+plt.title('Top 10 Neighbourhoods by Total Days Booked in 60 Days')
+plt.xlabel('Neighbourhood')
+plt.ylabel('Total Days Booked')
+plt.xticks(rotation=45)
+plt.grid(True, linestyle='--', alpha=0.6)
+sns.despine()
+
+for p in ax.patches:
+    ax.annotate(format(p.get_height(), '.1f'), 
+                   (p.get_x() + p.get_width() / 2., p.get_height()), 
+                   ha = 'center', va = 'center', 
+                   xytext = (0, 9), 
+                   textcoords = 'offset points')
+plt.tight_layout()
+plt.show()
+```
+
+# Plot for the relationship between top 10 booked neighbourhoods and Population Density
+
+```{python}
+import pandas as pd
+import folium
+import json
+from folium import Icon
+
+
+dc_wards['Population_Density'] = dc_wards['DP05_0001E'] / dc_wards.geometry.area
+m = folium.Map(location=[38.9072, -77.0369], zoom_start=12, tiles='cartodbpositron')  # Changed tiles here
+
+choropleth = folium.Choropleth(
+    geo_data=dc_wards,
+    data=dc_wards,
+    columns=['NAMELSAD', 'Population_Density'],
+    key_on='feature.properties.NAMELSAD',
+    fill_color='YlGn',
+    fill_opacity=0.7,
+    line_opacity=0.2,
+    legend_name='Population Density in DC'
+).add_to(m)
+
+neighbourhood_data = df_withtop_10.groupby('neighbourhood_cleansed').agg({
+    'price_num': 'mean',
+    'average_review_score':'mean',
+    'latitude': 'mean',
+    'longitude': 'mean'
+}).reset_index()
+
+
+for index, row in neighbourhood_data.iterrows():
+    popup_html = f"""
+    <div style="width:200px;">
+        <strong>{row['neighbourhood_cleansed']}</strong><br>
+        Average price: ${round(row['price_num'], 2)}<br>
+        Average rating: {round(row['average_review_score'], 2)}
+    </div>
+    """
+    folium.Marker(
+        [row['latitude'], row['longitude']],
+        popup=folium.Popup(popup_html, max_width=265),
+        tooltip=row['neighbourhood_cleansed'],
+        icon=Icon(color='blue', icon='info-sign')
+    ).add_to(m)
+
+# Display the map
+m
+```
+
+# Plot for relationship between top 10 booked neighbourhoods and Average Price
+
+```{python}
+import pandas as pd
+import plotly.graph_objects as go
+
+
+fig = px.choropleth_mapbox(
+    merged_gdf,
+    geojson=geojson_dict,
+    locations='neighbourhood_cleansed',  
+    featureidkey='properties.neighbourhood_cleansed',  
+    color='price_num',  
+    color_continuous_scale="tealrose",  
+    mapbox_style="carto-positron",  
+    zoom=10,  
+    center={"lat": 38.9, "lon": -77.03}, 
+    opacity=0.5,  
+    labels={'neighbourhood_cleansed':'Area','price_num': 'Average Price',}, 
+    hover_data={
+        'neighbourhood_cleansed': True,
+        'price_num': ':.2f',  
+    }
+)
+fig.update_traces(
+    hovertemplate=(
+        "<b>%{customdata[0]}</b><br>"
+        "<span style='font-size:0.9em;'>Average Price:</span> "
+        "<span style='font-size:0.9em;'><b>$%{customdata[1]:.2f}</b></span><br>"
+    )
+)
+
+fig.add_trace(
+    go.Scattermapbox(
+        lat=neighbourhood_data['latitude'],
+        lon=neighbourhood_data['longitude'],
+        mode='markers',
+        marker=go.scattermapbox.Marker(
+            size=9,
+            color='black',
+            opacity=0.7
+        ),
+        text=neighbourhood_data.apply(lambda row: f"{row['neighbourhood_cleansed']}<br>Avg. Price: ${round(row['price_num'], 2)}", axis=1),
+        hoverinfo='text'
+    )
+    
+)
+
+fig.update_layout(
+    hoverlabel=dict(
+        font=dict(family="Courier New, monospace", size=12),
+        bordercolor='pink',
+        bgcolor='white'
+    ),
+    title='Average Airbnb Price and Review by Neighborhood in DC',
+    margin={"r": 0, "t": 0, "l": 0, "b": 0},
+    clickmode='event+select'
+)
+
+fig.show()
+```
+
+```{python}
+import pandas as pd
+import plotly.graph_objects as go
+
+fig = px.choropleth_mapbox(
+    merged_gdf,
+    geojson=geojson_dict,
+    locations='neighbourhood_cleansed',  
+    featureidkey='properties.neighbourhood_cleansed',  
+    color='average_review_score',  
+    color_continuous_scale="tealrose",  
+    mapbox_style="carto-positron",  
+    zoom=10,  
+    center={"lat": 38.9, "lon": -77.03}, 
+    opacity=0.5,  
+    labels={'neighbourhood_cleansed':'Area','average_review_score':'Average rating'}, 
+    hover_data={
+        'neighbourhood_cleansed': True,
+        'average_review_score': ':.2f'  
+    }
+)
+fig.update_traces(
+    hovertemplate=(
+        "<b>%{customdata[0]}</b><br>"
+        "<span style='font-size:0.9em;'>Average Rating:</span> "
+        "<span style='font-size:0.9em;'><b>%{customdata[1]:.2f}</b></span>"
+    )
+)
+
+fig.add_trace(
+    go.Scattermapbox(
+        lat=neighbourhood_data['latitude'],
+        lon=neighbourhood_data['longitude'],
+        mode='markers',
+        marker=go.scattermapbox.Marker(
+            size=9,
+            color='black',
+            opacity=0.7
+        ),
+        text=neighbourhood_data.apply(lambda row: f"{row['neighbourhood_cleansed']}<br>Avg. Rating: {round(row['average_review_score'], 2)}", axis=1),
+        hoverinfo='text'
+    )
+    
+)
+
+fig.update_layout(
+    hoverlabel=dict(
+        font=dict(family="Courier New, monospace", size=12),
+        bordercolor='pink',
+        bgcolor='white'
+    ),
+    title='Average Airbnb Price and Review by Neighborhood in DC',
+    margin={"r": 0, "t": 0, "l": 0, "b": 0},
+    clickmode='event+select'
+)
+
+fig.show()
+```
+
+# Word Cloud
+
+```{python}
+import pandas as pd
+import numpy as np
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+import string
+from PIL import Image
+from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
+from collections import Counter
+from nltk.corpus import stopwords
+import nltk
+
+
+host_about_text = df['host_about'].dropna()
+combined_text = " ".join(host_about_text)
+
+# Removing punctuation
+translator = str.maketrans('', '', string.punctuation)
+text_no_punctuation = combined_text.translate(translator)
+nltk.download('stopwords')
+
+# Set of English stopwords
+stop_words = set(stopwords.words('english'))
+# Manually defining a basic set of English stopwords
+# basic_stopwords = set([
+#    "i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours",
+#    "yourself", "yourselves", "he", "him", "his", "himself", "she", "her", "hers",
+#    "herself", "it", "its", "itself", "they", "them", "their", "theirs", "themselves",
+#    "what", "which", "who", "whom", "this", "that", "these", "those", "am", "is", "are",
+#    "was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does",
+#    "did", "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until",
+#    "while", "of", "at", "by", "for", "with", "about", "against", "between", "into",
+#    "through", "during", "before", "after", "above", "below", "to", "from", "up", "down",
+#    "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here",
+#    "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more",
+#    "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so",
+#    "than", "too", "very", "s", "t", "can", "will", "just", "don", "should", "now","washington","dc","you'll"
+#])
+
+# Remove basic stopwords
+text_no_basic_stopwords = ' '.join([word for word in text_no_punctuation.lower().split() if word not in stop_words])
+mask = np.array(Image.open("comment.png"))
+# Generate the word cloud with the simplified stopword set
+wordcloud = WordCloud(width = 800, height = 800, 
+                background_color ='white', 
+                stopwords = stop_words, 
+                min_font_size = 10,mask=mask).generate(text_no_basic_stopwords)
+
+# Display the word cloud
+plt.figure(figsize = (8, 8), facecolor = None) 
+plt.imshow(wordcloud) 
+plt.axis("off") 
+plt.tight_layout(pad = 0) 
+plt.show()
+```
+
+```{python}
+word_counts = Counter(text_no_basic_stopwords.split())
+most_common_words = word_counts.most_common(10)
+
+# Data for plotting
+words = [word for word, freq in most_common_words]
+frequencies = [freq for word, freq in most_common_words]
+
+
+data_word = pd.DataFrame({
+    'Words': words,
+    'Frequency': frequencies
+})
+
+plt.figure(figsize=(10, 6))
+
+ax = sns.barplot(x='Words', y='Frequency', data=data_word, palette="coolwarm")  
+
+plt.xlabel('Words', fontsize=12)
+plt.ylabel('Frequency', fontsize=12)
+plt.title('Top 10 Most Frequent Words', fontsize=16)
+plt.xticks(rotation=45, fontsize=10)
+plt.yticks(fontsize=10)
+
+plt.grid(True, linestyle='--', alpha=0.6)
+
+for p in ax.patches:
+    ax.annotate(format(p.get_height(), '.1f'),  # formatting the label to show with one decimal
+                (p.get_x() + p.get_width() / 2., p.get_height()), 
+                ha='center', va='center', 
+                xytext=(0, 10), 
+                textcoords='offset points')
+
+plt.tight_layout()
+plt.show()
+```
+
+# the number of days since hostage and the number of days taken/reviews
+
+```{python}
+
+# Creating a scatter plot of 'host_days_since' vs 'taken_60'
+plt.figure(figsize=(10, 6))
+plt.scatter(df['host_days_since'], df['taken_60'], alpha=0.5)
+plt.title('Relationship between Host Days Since and Days Booked in Last 60 Days')
+plt.xlabel('Days Since Host Started')
+plt.ylabel('Days Booked in Last 60 Days')
+plt.grid(True)
+plt.show()
+```
+
+# room type and price/rating
+
+```{python}
+import ipywidgets as widgets
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+median_price_per_room_type = df.groupby('room_type')['price_num'].median().reset_index()
+average_review_per_room_type = df.groupby('room_type')['average_review_score'].mean().reset_index()
+
+# Function to plot the data
+def plot_data(metric):
+    plt.figure(figsize=(10, 6))
+    if metric == 'Median Price':
+        barplot = sns.barplot(x='room_type', y='price_num', data=median_price_per_room_type, palette='coolwarm')
+        for p in barplot.patches:
+            barplot.annotate(format(p.get_height(), '.2f'), 
+                             (p.get_x() + p.get_width() / 2., p.get_height()), 
+                             ha = 'center', va = 'center', 
+                             xytext = (0, 9), 
+                             textcoords = 'offset points')
+        plt.ylabel('Median Price ($)',fontsize = 14)
+    else:
+        barplot_rat = sns.barplot(x='room_type', y='average_review_score', data=average_review_per_room_type, palette='viridis')
+        for p_r in barplot_rat.patches:
+            barplot_rat.annotate(format(p_r.get_height(), '.2f'), 
+                                 (p_r.get_x() + p_r.get_width() / 2., p_r.get_height()), 
+                                 ha = 'center', va = 'center', 
+                                 xytext = (0, 9), 
+                                 textcoords = 'offset points')
+        plt.ylabel('Average Rating',fontsize = 14)
+    
+    plt.title(f'{metric} by Room Type')
+    plt.xlabel('Room Type',fontsize = 14)
+    plt.grid(True, axis='y')
+    plt.show()
+
+# Dropdown menu with enhanced styling
+dropdown = widgets.Dropdown(
+    options=['Median Price', 'Average Review Score'],
+    value='Median Price',
+    description='Select one:',
+    style={'description_width': 'initial'},  
+    layout={'width': '50%'} 
+)
+
+widgets.interact(plot_data, metric=dropdown)
+```
+
+# price and reviews
+
+```{python}
+
+Q1 = df['price_num'].quantile(0.25)
+Q3 = df['price_num'].quantile(0.75)
+IQR = Q3 - Q1
+
+upper_limit = Q3 + 1.5 * IQR
+df_without_outlines = df[df['price_num'] <= upper_limit]
+
+bins = [0, 50, 100, 150, 200, 250, 300]
+labels = ['0-50', '50-100', '100-150', '150-200', '200-250', '250-300']
+df_without_outlines['price_range'] = pd.cut(df_without_outlines['price_num'], bins=bins, labels=labels, right=False)
+
+average_rating_by_price_range = df_without_outlines.groupby('price_range')['average_review_score'].mean().reset_index()
+
+def plot_relation(metric):
+    plt.figure(figsize=(12, 8))
+    if metric == 'Relationship between Price and Average Review Score':
+        sns.regplot(x='price_num', y='average_review_score', data=df_without_outlines, scatter_kws={'alpha':0.5},color="pink", line_kws={'color': 'lightblue'})
+        plt.title('Relationship between Price and Average Review Score (Without Outliers)',fontsize=18)
+        plt.xlabel('Price ($)',fontsize=14)
+        plt.ylabel('Average Review Score',fontsize=14)
+    else:
+        sns.barplot(x='price_range', y='average_review_score', data=average_rating_by_price_range, palette='viridis')
+        plt.title('Average Review Score by Price Range',fontsize=18)
+        plt.xlabel('Price Range ($)',fontsize=14)
+        plt.ylabel('Average Review Score',fontsize=14)
+    
+    plt.grid(True, axis='y')
+    plt.show()
+
+dropdown = widgets.Dropdown(
+    options=['Relationship between Price and Average Review Score', 'Average Review Score by Price Range'],
+    description='Select one:',
+    style={'description_width': 'initial'},  
+    layout={'width': '50%'} 
+)
+
+widgets.interact(plot_relation, metric=dropdown)
+```
+
+# review scores by each host, location
+
+```{python}
+# Top 20
+def plot_neighbourhood(neighbourhood):
+    data = df[df['neighbourhood_cleansed'] == neighbourhood]
+    average_rating_by_host = data.groupby('host_name')['average_review_score'].mean().sort_values(ascending=False).head(20)
+    
+    plt.figure(figsize=(10, 8))
+    sns.barplot(x=average_rating_by_host.values, y=average_rating_by_host.index, palette='viridis')
+    plt.title(f'Average Review Score by Host in {neighbourhood}',fontsize = 18)
+    plt.xlabel('Average Review Score',fontsize = 14)
+    plt.ylabel('Host',fontsize = 14)
+    plt.show()
+
+# Dropdown menu for selecting the neighbourhood
+neighbourhoods = df['neighbourhood_cleansed'].unique()
+
+widgets.interact(plot_neighbourhood, neighbourhood=widgets.Dropdown(options=neighbourhoods, description="Area:")
+                 ,layout={'width': '50%'},style={'description_width': 'initial'},   )
+```
+
+# the hosts have most/least airbnbs
+
+# number of reviews and the review scores
+
+```{python}
+def plot_graph(graph_type):
+    plt.figure(figsize=(12, 8))
+    if graph_type == 'Host Listings vs. Rating':
+        sns.regplot(x='calculated_host_listings_count', y='average_review_score', data=without_fl, color="pink",
+                    scatter_kws={'alpha':0.6}, line_kws={'color': 'lightblue'})
+        plt.title("Relationship between Host's Airbnb Number and Average Rating (Modified)", fontsize=18)
+        plt.xlabel('Number of Listings (Host\'s Airbnb Number)', fontsize=14)
+        plt.ylabel('Average Review Score', fontsize=14)
+    elif graph_type == 'Number of Reviews vs. Review Scores':
+        sns.regplot(x='number_of_reviews', y='review_scores_rating', data=df, color="pink",
+                    scatter_kws={'alpha':0.9}, line_kws={'color': 'lightblue'})
+        plt.title('Relationship between Number of Reviews and Review Scores', fontsize=18)
+        plt.xlabel('Number of Reviews', fontsize=14)
+        plt.ylabel('Review Scores Rating', fontsize=14)
+    plt.grid(True)
+    plt.show()
+
+# Dropdown menu for selecting the plot
+dropdown = widgets.Dropdown(
+    options=['Host Listings vs. Rating', 'Number of Reviews vs. Review Scores'],
+    value='Host Listings vs. Rating',
+    description='Select Plot:',
+    disabled=False,
+)
+
+widgets.interact(plot_graph, graph_type=dropdown)
+```
+
