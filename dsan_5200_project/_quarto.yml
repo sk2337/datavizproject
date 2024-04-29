@@ -1,0 +1,46 @@
+project:
+  type: website
+
+website:
+
+  back-to-top-navigation: true
+  repo-url: https://github.com/quarto-dev/quarto-demo
+  repo-actions: [edit, issue]
+
+  title: "DC Airbnb"
+  navbar:
+    background: "#FF5A5F"
+    foreground: "#000000"
+
+    search: true
+    left:
+      - href: about.qmd
+        text: Introduction
+      - href: viz_ge.qmd
+        text: Home
+
+    tools:
+      - icon: github
+        menu:
+          - text: Code
+            url:  https://github.com/sk2337/datavizproject.git
+          - text: Report a Bug
+            url:  https://bugs.com
+      
+    
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    grid:
+      sidebar-width: 350px
+    code-fold: true
+    code-summary: "Show the code"
+
+
+
+
+
+
