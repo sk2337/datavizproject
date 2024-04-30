@@ -15,11 +15,11 @@ website:
     search: true
     left:
       - href: viz_ge.qmd
-        text: Home
-      - href: analysis.qmd
-        text: Factor analysis 
+        text: Home 
       - href: viz_j.qmd
         text: Airbnb Listing Metrics Across Washington
+      - href: analysis.qmd
+        text: Factor analysis
 
     tools:
       - icon: github
