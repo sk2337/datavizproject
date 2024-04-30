@@ -1,0 +1,188 @@
+# Factor analysis 
+
+### Room type and price/rating
+
+The first analysis explores the relationship between the type of room offered on Airbnb and two key metrics: price and rating. This helps to understand which room types are more expensive and which ones tend to receive higher ratings from guests. By analyzing the median prices and average review scores across different room types, we can gain insights into guest preferences and pricing strategies
+
+```{python}
+import warnings
+
+# To suppress all warnings
+warnings.filterwarnings('ignore')
+import pandas as pd
+import geopandas as gpd
+import plotly.express as px
+import json
+import matplotlib.pyplot as plt
+
+
+
+dc_bound = gpd.read_file("neighbourhoods.geojson")
+df = pd.read_csv("cleaned_data.csv")
+
+# get average rating
+specified_review_score_columns = [
+    'review_scores_rating', 'review_scores_accuracy', 'review_scores_cleanliness',
+    'review_scores_checkin', 'review_scores_communication', 'review_scores_location',
+    'review_scores_value'
+]
+
+df['average_review_score'] = df[specified_review_score_columns].mean(axis=1)
+```
+
+
+```{python}
+import ipywidgets as widgets
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Assuming 'df' is your DataFrame containing the data
+median_price_per_room_type = df.groupby('room_type')['price_num'].median().reset_index()
+average_review_per_room_type = df.groupby('room_type')['average_review_score'].mean().reset_index()
+
+def plot_median_price():
+    plt.figure(figsize=(7, 5))
+    barplot = sns.barplot(x='room_type', y='price_num', data=median_price_per_room_type, palette='coolwarm')
+    for p in barplot.patches:
+        barplot.annotate(format(p.get_height(), '.2f'), 
+                         (p.get_x() + p.get_width() / 2., p.get_height()), 
+                         ha='center', va='center', 
+                         xytext=(0, 9), 
+                         textcoords='offset points')
+    plt.title('Median Price by Room Type')
+    plt.ylabel('Median Price ($)', fontsize=14)
+    plt.xlabel('Room Type', fontsize=14)
+    plt.grid(True, axis='y')
+    plt.show()
+
+def plot_average_review_score():
+    plt.figure(figsize=(7, 5))
+    barplot_rat = sns.barplot(x='room_type', y='average_review_score', data=average_review_per_room_type, palette='viridis')
+    for p in barplot_rat.patches:
+        barplot_rat.annotate(format(p.get_height(), '.2f'), 
+                             (p.get_x() + p.get_width() / 2., p.get_height()), 
+                             ha='center', va='center', 
+                             xytext=(0, 9), 
+                             textcoords='offset points')
+    plt.title('Average Review Score by Room Type')
+    plt.ylabel('Average Rating', fontsize=14)
+    plt.xlabel('Room Type', fontsize=14)
+    plt.grid(True, axis='y')
+    plt.show()
+
+# Call the functions to display the plots
+plot_median_price()
+plot_average_review_score()
+
+```
+
+From the plots, it becomes evident that different room types cater to various guest expectations and budget ranges. Here's a summary of the findings:
+
+- Entire House: Median Price: $132, Average Rating: 4.79
+- Hotel Room: Median Price: $29, Average Rating: 4.59
+- Private Room: Median Price: $132, Average Rating: 4.72
+- Shared Room: Median Price: $132, Average Rating: 4.59
+
+These results indicate that Entire Houses and Private Rooms command higher prices and tend to be rated more favorably, suggesting a preference for privacy among guests.
+
+### The Relationship Betwwen Price and Reviews
+
+This analysis seeks to understand how pricing influences guest satisfaction as measured by review scores. By examining the relationship between price and average review scores, both through scatter plots and categorized price ranges, we can identify pricing strategies that maximize guest satisfaction.
+
+```{python}
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+Q1 = df['price_num'].quantile(0.25)
+Q3 = df['price_num'].quantile(0.75)
+IQR = Q3 - Q1
+
+upper_limit = Q3 + 1.5 * IQR
+df_without_outliers = df[df['price_num'] <= upper_limit]
+
+bins = [0, 50, 100, 150, 200, 250, 300]
+labels = ['0-50', '50-100', '100-150', '150-200', '200-250', '250-300']
+df_without_outliers['price_range'] = pd.cut(df_without_outliers['price_num'], bins=bins, labels=labels, right=False)
+
+average_rating_by_price_range = df_without_outliers.groupby('price_range')['average_review_score'].mean().reset_index()
+
+def plot_relationship_between_price_and_review():
+    plt.figure(figsize=(7, 5))
+    sns.regplot(x='price_num', y='average_review_score', data=df_without_outliers, scatter_kws={'alpha':0.5}, color="pink", line_kws={'color': 'lightblue'})
+    plt.title('Relationship between Price and Average Review Score (Without Outliers)', fontsize=18)
+    plt.xlabel('Price ($)', fontsize=14)
+    plt.ylabel('Average Review Score', fontsize=14)
+    plt.grid(True, axis='y')
+    plt.show()
+
+def plot_average_review_by_price_range():
+    plt.figure(figsize=(7, 5))
+    barplot = sns.barplot(x='price_range', y='average_review_score', data=average_rating_by_price_range, palette='viridis')
+    plt.title('Average Review Score by Price Range', fontsize=18)
+    plt.xlabel('Price Range ($)', fontsize=14)
+    plt.ylabel('Average Review Score', fontsize=14)
+
+    for p in barplot.patches:
+        barplot.annotate(format(p.get_height(), '.2f'), 
+                         (p.get_x() + p.get_width() / 2., p.get_height()), 
+                         ha='center', va='center', 
+                         xytext=(0, 9), 
+                         textcoords='offset points')
+    
+    plt.grid(True, axis='y')
+    plt.show()
+
+plot_relationship_between_price_and_review()
+plot_average_review_by_price_range()
+```
+
+The regression analysis indicates a positive correlation between price and review scores, suggesting that higher priced listings generally receive higher ratings. Here's a detailed look at the average ratings across different price ranges:
+
+- $0-50: Average Rating: 4.57
+- $50-100: Average Rating: 4.76
+- $100-150: Average Rating: 4.78
+- $150-200: Average Rating: 4.80
+- $200-250: Average Rating: 4.77
+- $250-300: Average Rating: 4.80
+- 
+Higher priced listings, particularly those above $150 tend to have slightly better average ratings, which might reflect a higher level of service or better accommodation quality that satisfies higher paying guests.
+
+### Hosts' Number of Airbnbs vs. Review Scores and Number of Reviews vs. Review Scores
+
+This part is aim to explores how the number of listings a host manages affects their review scores, as well as the relationship between the number of reviews a listing has and its review scores. This helps to understand whether managing more properties impacts the quality of guest experience and if more reviews correlate with higher ratings.
+
+```{python}
+def plot_host_listings_vs_rating():
+    plt.figure(figsize=(7, 5))
+    sns.regplot(x='calculated_host_listings_count', y='average_review_score', data=df, color="pink",
+                scatter_kws={'alpha':0.6}, line_kws={'color': 'lightblue'})
+    plt.title("Relationship between Host's Airbnb Number and Average Rating (Modified)", fontsize=18)
+    plt.xlabel('Number of Listings (Host\'s Airbnb Number)', fontsize=14)
+    plt.ylabel('Average Review Score', fontsize=14)
+    plt.grid(True)
+    plt.show()
+
+def plot_number_of_reviews_vs_review_scores():
+    plt.figure(figsize=(7, 5))
+    sns.regplot(x='number_of_reviews', y='review_scores_rating', data=df, color="pink",
+                scatter_kws={'alpha':0.9}, line_kws={'color': 'lightblue'})
+    plt.title('Relationship between Number of Reviews and Review Scores', fontsize=18)
+    plt.xlabel('Number of Reviews', fontsize=14)
+    plt.ylabel('Review Scores Rating', fontsize=14)
+    plt.grid(True)
+    plt.show()
+
+# Call the plotting functions
+plot_host_listings_vs_rating()
+plot_number_of_reviews_vs_review_scores()
+
+```
+
+- Host's Airbnb Number vs. Average Rating: The regression analysis shows a slight negative trend, suggesting that hosts with more listings may have slightly lower average review scores. This could imply challenges in maintaining quality and personalized service across multiple properties.
+- Number of Reviews vs. Review Scores: There is a positive correlation observed here, indicating that listings with more reviews tend to have higher review scores. This may be due to the fact that better established listings accumulate more positive feedback over time.
+- 
+These insights are valuable for both hosts aiming to optimize their hosting strategies and guests looking for the best possible rental experiences.
