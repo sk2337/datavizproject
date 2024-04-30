@@ -18,6 +18,8 @@ website:
         text: Home
       - href: analysis.qmd
         text: Factor analysis 
+      - href: viz_j.qmd
+        text: Airbnb Listing Metrics Across Washington
 
     tools:
       - icon: github
