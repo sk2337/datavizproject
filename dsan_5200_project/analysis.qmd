@@ -1,4 +1,4 @@
-# Factore analysis 
+# Factor analysis 
 
 ### Room type and price/rating
 
