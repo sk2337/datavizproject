@@ -7,5 +7,11 @@
   },
   "viz_ge.qmd": {
     "viz_ge.html": "d3d74721"
+  },
+  "compare.qmd": {
+    "compare.html": "82d85f4e"
+  },
+  "analysis.qmd": {
+    "analysis.html": "d4de2ddf"
   }
 }

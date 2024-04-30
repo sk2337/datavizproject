@@ -157,8 +157,20 @@ In this analysis, we calculate a composite score for each neighborhood in Washin
 
 
 ```{python}
-import plotly.graph_objects as go
-merged_gdf['score'] = (merged_gdf['price_num'] * 0.5 + merged_gdf['average_review_score'] * 0.5)
+from sklearn.preprocessing import MinMaxScaler
+
+# Prepare the data
+price = merged_gdf['price_num'].values.reshape(-1, 1)  # Reshaping for scaler
+score = merged_gdf['average_review_score'].values.reshape(-1, 1)
+
+scaler = MinMaxScaler()
+
+# Normalize the data
+merged_gdf['normalized_price'] = scaler.fit_transform(price)
+merged_gdf['normalized_score'] = scaler.fit_transform(score)
+
+# Update score calculation to use normalized values
+merged_gdf['score'] = (merged_gdf['normalized_price'] * 0.5 + merged_gdf['normalized_score'] * 0.5)
 
 # Create base figure with map settings
 fig = go.Figure(go.Choroplethmapbox(
@@ -201,7 +213,7 @@ sliders = [
         steps=[
             dict(method='restyle',
                  args=[
-                     {'z': [(merged_gdf['price_num'] * k * 0.01) + (merged_gdf['average_review_score'] * (1 - k * 0.01)) if merged_gdf['average_review_score'].iloc[i] * (1 - k * 0.01) != 0 else 0 for i in range(len(merged_gdf))]}
+                     {'z': [(merged_gdf['normalized_price'] * k * 0.01) + (merged_gdf['normalized_score'] * (1 - k * 0.01)) if merged_gdf['normalized_score'].iloc[i] * (1 - k * 0.01) != 0 else 0 for i in range(len(merged_gdf))]}
                  ],
                  label=f"{k * 0.01:.2f}") for k in range(100)
         ]
@@ -610,131 +622,4 @@ plt.show()
 The word cloud generated from the host descriptions really captures what’s valued most in rental listings, with "Washington DC" being a standout. For sure the hosts want people to know where they are. Also, the word "love" popping up frequently suggests that hosts really put heart into their properties, want to create a warm  atmosphere.
 
 Phrases like "fully equipped" and "thoughtfully designed" shine through too, indicating that hosts strive to offer more than just the basics. These terms likely refer to amenities like well stocked kitchens and pleasing decor, crucial for travelers who want a "home away from home." The mention of "travel" ties directly to the guest's needs, hinting that hosts think about what conveniences will make travel smoother.
-
-# Factore analysis 
-
-### room type and price/rating
-
-```{python}
-import ipywidgets as widgets
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-median_price_per_room_type = df.groupby('room_type')['price_num'].median().reset_index()
-average_review_per_room_type = df.groupby('room_type')['average_review_score'].mean().reset_index()
-
-# Function to plot the data
-def plot_data(metric):
-    plt.figure(figsize=(10, 6))
-    if metric == 'Median Price':
-        barplot = sns.barplot(x='room_type', y='price_num', data=median_price_per_room_type, palette='coolwarm')
-        for p in barplot.patches:
-            barplot.annotate(format(p.get_height(), '.2f'), 
-                             (p.get_x() + p.get_width() / 2., p.get_height()), 
-                             ha = 'center', va = 'center', 
-                             xytext = (0, 9), 
-                             textcoords = 'offset points')
-        plt.ylabel('Median Price ($)',fontsize = 14)
-    else:
-        barplot_rat = sns.barplot(x='room_type', y='average_review_score', data=average_review_per_room_type, palette='viridis')
-        for p_r in barplot_rat.patches:
-            barplot_rat.annotate(format(p_r.get_height(), '.2f'), 
-                                 (p_r.get_x() + p_r.get_width() / 2., p_r.get_height()), 
-                                 ha = 'center', va = 'center', 
-                                 xytext = (0, 9), 
-                                 textcoords = 'offset points')
-        plt.ylabel('Average Rating',fontsize = 14)
-    
-    plt.title(f'{metric} by Room Type')
-    plt.xlabel('Room Type',fontsize = 14)
-    plt.grid(True, axis='y')
-    plt.show()
-
-# Dropdown menu with enhanced styling
-dropdown = widgets.Dropdown(
-    options=['Median Price', 'Average Review Score'],
-    value='Median Price',
-    description='Select one:',
-    style={'description_width': 'initial'},  
-    layout={'width': '50%'} 
-)
-
-widgets.interact(plot_data, metric=dropdown)
-```
-
-### price and reviews
-
-```{python}
-
-Q1 = df['price_num'].quantile(0.25)
-Q3 = df['price_num'].quantile(0.75)
-IQR = Q3 - Q1
-
-upper_limit = Q3 + 1.5 * IQR
-df_without_outlines = df[df['price_num'] <= upper_limit]
-
-bins = [0, 50, 100, 150, 200, 250, 300]
-labels = ['0-50', '50-100', '100-150', '150-200', '200-250', '250-300']
-df_without_outlines['price_range'] = pd.cut(df_without_outlines['price_num'], bins=bins, labels=labels, right=False)
-
-average_rating_by_price_range = df_without_outlines.groupby('price_range')['average_review_score'].mean().reset_index()
-
-def plot_relation(metric):
-    plt.figure(figsize=(12, 8))
-    if metric == 'Relationship between Price and Average Review Score':
-        sns.regplot(x='price_num', y='average_review_score', data=df_without_outlines, scatter_kws={'alpha':0.5},color="pink", line_kws={'color': 'lightblue'})
-        plt.title('Relationship between Price and Average Review Score (Without Outliers)',fontsize=18)
-        plt.xlabel('Price ($)',fontsize=14)
-        plt.ylabel('Average Review Score',fontsize=14)
-    else:
-        sns.barplot(x='price_range', y='average_review_score', data=average_rating_by_price_range, palette='viridis')
-        plt.title('Average Review Score by Price Range',fontsize=18)
-        plt.xlabel('Price Range ($)',fontsize=14)
-        plt.ylabel('Average Review Score',fontsize=14)
-    
-    plt.grid(True, axis='y')
-    plt.show()
-
-dropdown = widgets.Dropdown(
-    options=['Relationship between Price and Average Review Score', 'Average Review Score by Price Range'],
-    description='Select one:',
-    style={'description_width': 'initial'},  
-    layout={'width': '50%'} 
-)
-
-widgets.interact(plot_relation, metric=dropdown)
-```
-
-
-
-### the hosts have most/least airbnbs , number of reviews and the review scores
-
-```{python}
-def plot_graph(graph_type):
-    plt.figure(figsize=(8, 6))
-    if graph_type == 'Host Listings vs. Rating':
-        sns.regplot(x='calculated_host_listings_count', y='average_review_score', data=df, color="pink",
-                    scatter_kws={'alpha':0.6}, line_kws={'color': 'lightblue'})
-        plt.title("Relationship between Host's Airbnb Number and Average Rating (Modified)", fontsize=18)
-        plt.xlabel('Number of Listings (Host\'s Airbnb Number)', fontsize=14)
-        plt.ylabel('Average Review Score', fontsize=14)
-    elif graph_type == 'Number of Reviews vs. Review Scores':
-        sns.regplot(x='number_of_reviews', y='review_scores_rating', data=df, color="pink",
-                    scatter_kws={'alpha':0.9}, line_kws={'color': 'lightblue'})
-        plt.title('Relationship between Number of Reviews and Review Scores', fontsize=18)
-        plt.xlabel('Number of Reviews', fontsize=14)
-        plt.ylabel('Review Scores Rating', fontsize=14)
-    plt.grid(True)
-    plt.show()
-
-# Dropdown menu for selecting the plot
-dropdown = widgets.Dropdown(
-    options=['Host Listings vs. Rating', 'Number of Reviews vs. Review Scores'],
-    value='Host Listings vs. Rating',
-    description='Select Plot:',
-    disabled=False,
-)
-
-widgets.interact(plot_graph, graph_type=dropdown)
-```
 

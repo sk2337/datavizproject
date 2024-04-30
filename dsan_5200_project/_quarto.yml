@@ -16,6 +16,8 @@ website:
     left:
       - href: viz_ge.qmd
         text: Home
+      - href: analysis.qmd
+        text: Factore analysis 
 
     tools:
       - icon: github
