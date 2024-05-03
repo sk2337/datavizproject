@@ -20,10 +20,78 @@ Our study is based on data from Inside Airbnb, a reputable source that provides 
 
 This rich dataset allows us to perform a nuanced analysis of guest preferences and behavior patterns, providing a granular view of the factors that influence accommodation choices in Washington, D.C. By leveraging this data, we aim to generate actionable insights that can enhance the hosting experience and optimize guests' stays in the city.
 
+# 1. What Hosts Want People to Know About Their Listings
 
-# Heat Map Analysis: Median Price and Average Rating
+Before we do any analysis, let's take a look at how hosts describe their offerings on our platform, we've analyzed the 'About' sections from various listings. By extracting key terms and phrases from these descriptions, we've created a visual representation through a word cloud. This visualization highlights the most frequently mentioned features and attributes, giving us a clearer picture of what hosts believe are the most appealing aspects of their properties.
 
-To further understand the landscape of Airbnb accommodations in Washington, D.C., we've created heat maps that visually represent the median price and average ratings across different neighborhoods. These maps offer a clear, intuitive display of how prices and guest satisfaction vary geographically throughout the city.
+```{python}
+import pandas as pd
+import numpy as np
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+import string
+from PIL import Image
+from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
+from collections import Counter
+from nltk.corpus import stopwords
+import nltk
+
+df = pd.read_csv("cleaned_data.csv")
+
+host_about_text = df['host_about'].dropna()
+combined_text = " ".join(host_about_text)
+
+# Removing punctuation
+translator = str.maketrans('', '', string.punctuation)
+text_no_punctuation = combined_text.translate(translator)
+nltk.download('stopwords')
+
+# Set of English stopwords
+stop_words = set(stopwords.words('english'))
+# Manually defining a basic set of English stopwords
+# basic_stopwords = set([
+#    "i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours",
+#    "yourself", "yourselves", "he", "him", "his", "himself", "she", "her", "hers",
+#    "herself", "it", "its", "itself", "they", "them", "their", "theirs", "themselves",
+#    "what", "which", "who", "whom", "this", "that", "these", "those", "am", "is", "are",
+#    "was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does",
+#    "did", "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until",
+#    "while", "of", "at", "by", "for", "with", "about", "against", "between", "into",
+#    "through", "during", "before", "after", "above", "below", "to", "from", "up", "down",
+#    "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here",
+#    "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more",
+#    "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so",
+#    "than", "too", "very", "s", "t", "can", "will", "just", "don", "should", "now","washington","dc","you'll"
+#])
+
+# Remove basic stopwords
+text_no_basic_stopwords = ' '.join([word for word in text_no_punctuation.lower().split() if word not in stop_words])
+mask = np.array(Image.open("comment.png"))
+# Generate the word cloud with the simplified stopword set
+wordcloud = WordCloud(width = 800, height = 800, 
+                background_color ='white', 
+                stopwords = stop_words, 
+                min_font_size = 10,mask=mask).generate(text_no_basic_stopwords)
+
+# Display the word cloud
+plt.figure(figsize = (7, 7), facecolor = None) 
+plt.imshow(wordcloud) 
+plt.axis("off") 
+plt.tight_layout(pad = 0) 
+plt.show()
+```
+
+#### Conclusion
+
+The word cloud generated from the host descriptions really captures what’s valued most in rental listings, with "Washington DC" being a standout. For sure the hosts want people to know where they are. Also, the word "love" popping up frequently suggests that hosts really put heart into their properties, want to create a warm  atmosphere.
+
+Phrases like "fully equipped" and "thoughtfully designed" shine through too, indicating that hosts strive to offer more than just the basics. These terms likely refer to amenities like well stocked kitchens and pleasing decor, crucial for travelers who want a "home away from home." The mention of "travel" ties directly to the guest's needs, hinting that hosts think about what conveniences will make travel smoother.
+
+
+
+# 2. Key Influencers of Airbnb Bookings: Price and Rating
+
+First, we want to explore the most import things people look at when they book airbnbs which is price and rating. To understand the landscape of Airbnb accommodations in Washington, D.C., we've created heat maps that visually represent the median price and average ratings across different neighborhoods. These maps offer a clear, intuitive display of how prices and guest satisfaction vary geographically throughout the city.
 
 ```{python}
 import warnings
@@ -81,7 +149,7 @@ fig = go.Figure(go.Choroplethmapbox(
     locations=merged_gdf['neighbourhood_cleansed'],  
     featureidkey='properties.neighbourhood_cleansed',  
     z=merged_gdf['average_review_score'],  # initial z values, can be changed by dropdown
-    colorscale="tealrose",
+    colorscale="viridis",
     marker_opacity=0.5,
     marker_line_width=0,
     hoverinfo='all'
@@ -152,7 +220,7 @@ This conclusion provides a quick summary and interpretation of the spatial distr
 
 ###  Optimal Airbnb Booking Locations Based on Custom Preferences
 
-In this analysis, we calculate a composite score for each neighborhood in Washington D.C. by combining the median price and average rating of Airbnb listings. This score is tailored according to user-defined weights, allowing for personalized decision-making based on individual preferences for cost versus quality. The lower the score, the more favorable the neighborhood is for booking, according to the specified preferences.
+In this analysis, we calculate a composite score for each neighborhood in Washington D.C. by combining the median price and average rating of Airbnb listings. This score is tailored according to user defined weights, allowing for personalized decision making based on individual preferences for cost versus quality. The higher the score, the more favorable the neighborhood is for booking, according to the specified preferences.
 
 
 
@@ -236,7 +304,7 @@ fig.show()
 ```
 
 #### Conclusion
-Based on the user-defined criteria, neighborhoods with the lowest scores are recommended for Airbnb bookings. This personalized approach helps in making informed decisions, balancing between cost efficiency and guest satisfaction. Users can fine-tune their preferences to find areas that best meet their needs, whether they are looking for the most affordable options or the highest-rated properties.
+Based on the user defined criteria, neighborhoods with the highest scores are recommended for Airbnb bookings. This personalized approach helps in making informed decisions, balancing between cost efficiency and guest satisfaction. Users can fine-tune their preferences to find areas that best meet their needs, whether they are looking for the most affordable options or the highest-rated properties.
 
 #### Addition(Average Rating for each host in each area)
 ```{python}
@@ -320,11 +388,161 @@ import seaborn as sns
 #                 ,layout={'width': '50%'},style={'description_width': 'initial'},   )
 ```
 
-#  What factors Influencing Airbnb Bookings in Washington D.C. Over the Last 60 Days
+### Conclusion
+
+After thoroughly examining the price and rating landscape in Washington, D.C., we've successfully developed a comprehensive tool to aid users in selecting the most suitable area for booking an Airbnb. Additionally, we've enhanced this tool by incorporating a bar plot highlighting the top-rated hosts within each selected area. However, our commitment to providing unparalleled guidance goes further. We aim to delve deeper into the intricate relationships between the number of bathrooms, accommodates, popularity density, and the distance from DC's most beloved tourist attractions. By analyzing these factors, we can offer tailored recommendations, ensuring guests make informed decisions on where to book their Airbnb in Washington, D.C
+
+# 3. Relationship Between Bathroom Numbers and Accommodation Capacities in Airbnb
+
+We wanted to see what factors were most influential in determining the airbnb prices. As price is an important factor for both customers and hosts, we wanted to take a look at the price as the dependent variable. Also, when thinking of the supply and demand curve, we thought that a higher demand would imply a higher price, and thus we looked at the relationship between price and other factors.
+
+- Number of Bathrooms:
+
+    - The number of bathrooms in an Airbnb property is often considered an important factor affecting its price.
+    - We investigated how the price varies with the number of bathrooms to understand its influence on pricing dynamics.
+- Accommodates Capacity:
+
+    - Another significant factor influencing Airbnb prices is the number of people the property can accommodate.
+    - 
+    - We examined the relationship between the accommodation capacity and the price to discern its impact on pricing trends.
+
+
+```{python}
+neighbourhoods_1 = gpd.read_file("neighbourhoods.geojson")
+neighbourhoods_1['neighbourhood_cleansed'] = neighbourhoods_1['neighbourhood']
+df_1 = pd.read_csv("cleaned_data.csv")
+pd.set_option('display.max_columns', None)
+
+Q1 = df_1['price_num'].quantile(0.25)
+Q3 = df_1['price_num'].quantile(0.75)
+IQR = Q3 - Q1
+lower_bound = Q1 - 1.5 * IQR
+upper_bound = Q3 + 1.5 * IQR
+df_1 = df_1[(df_1['price_num'] <= upper_bound) & (df_1['price_num'] >= lower_bound)]
+
+neighbourhoods_1['neighbourhood_cleansed'] = neighbourhoods_1['neighbourhood']
+df_1['median_price'] = df_1.groupby('neighbourhood_cleansed')['price_num'].transform('median')
+df_1['median_location_review'] = df_1.groupby('neighbourhood_cleansed')['review_scores_location'].transform('median')
+#merged_gdf = neighbourhoods_1.merge(df_1, on='neighbourhood_cleansed', how='right')
+```
+
+```{python}
+df_1['bathroom_num'] = df_1['bathrooms_text'].str.extract(r'(\d+)', expand=False)
+df_1['bathroom_num'] = pd.to_numeric(df_1['bathroom_num'])
+
+fig = px.box(df_1, x='bathroom_num', y='price_num')
+median_df = df_1.groupby('bathroom_num')['price_num'].median().reset_index()
+
+fig.add_trace(px.line(median_df, x='bathroom_num', y='price_num').data[0])
+fig.data[-1].line.color = 'red'
+fig.update_xaxes(title_text='Number of Bathrooms')
+fig.update_yaxes(title_text='Price')
+fig.update_layout(title='Price of Airbnbs by the Number of Bathrooms with Median Line')
+fig.show()
+```
+
+```{python}
+fig = px.box(df_1, x='accommodates', y='price_num')
+
+median_df = df_1.groupby('accommodates')['price_num'].median().reset_index()
+fig.add_trace(px.line(median_df, x='accommodates', y='price_num').data[0])
+fig.data[-1].line.color = 'red'
+fig.update_xaxes(title_text='Number of Accommodates Possible')
+fig.update_yaxes(title_text='Price')
+fig.update_layout(title='Price of Airbnbs by the Number of Accommodates with Median Line')
+
+fig.show()
+```
+
+### Conclusion
+
+In our analysis, we discovered that both the number of bathrooms and the accommodation capacity significantly impact Airbnb prices. Surprisingly, having more than 2-3 bathrooms or accommodating more than 8 people did not correlate with higher prices. This intriguing finding suggests that travelers seeking accommodations for larger groups can explore listings with higher accommodation capacities without facing a significant increase in cost. By doing so, travelers can enjoy the comfort and spaciousness of larger properties while staying within their budgetary constraints.
+
+# 4. Airbnb Prices and Distance from the National Monument
+
+Washington D.C. is renowned for its iconic landmarks, with the National Monument being a centerpiece of the city's attractions. To delve into the potential influence of proximity to this symbol on Airbnb pricing, we integrated a novel feature: the distance from the National Monument for each Airbnb listing. Our analysis aims to find any correlations between distance from this historical site and pricing trends in the D.C. Airbnb market.
+
+And Moving forward, we will focus our analysis specifically on the top ten neighborhoods that are most frequently booked within a 60-day window.
+
+```{python}
+neighbourhood_taken_60_sum_1 = df_1.groupby('neighbourhood_cleansed')['taken_60'].sum().sort_values(ascending=False)
+
+top_ten_neb = neighbourhood_taken_60_sum_1.head(10)
+names_only_1 = top_ten_neb.index
+top_nenb = list(names_only_1)
+df_withtop_10_1 = df_1[df_1['neighbourhood_cleansed'].isin(top_nenb)]
+```
+```{python}
+import math
+
+def haversine(lon1, lat1, lon2, lat2):
+    """
+    Calculate the great circle distance between two points 
+    on the earth (specified in decimal degrees)
+    """
+    # Convert decimal degrees to radians
+    lon1, lat1, lon2, lat2 = map(math.radians, [lon1, lat1, lon2, lat2])
+
+    # Haversine formula
+    dlon = lon2 - lon1 
+    dlat = lat2 - lat1 
+    a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a)) 
+    # Radius of earth in miles
+    radius = 3956
+    distance = radius * c
+    return distance
+
+target_latitude = 38.8895
+target_longitude = -77.0353
+
+
+# Calculate distance from target point to each point in the DataFrame
+df_withtop_10_1['Distance_miles'] = df_withtop_10_1.apply(lambda row: haversine(row['longitude'], row['latitude'], target_longitude, target_latitude), axis=1)
+```
+
+```{python}
+import statsmodels.api as sm
+
+# Fit a linear regression model
+X = df_withtop_10_1['Distance_miles']
+y = df_withtop_10_1['price_num']
+X = sm.add_constant(X)
+model = sm.OLS(y, X).fit()
+predictions = model.predict(X)
+
+# Create an interactive scatter plot with tooltips
+fig = px.scatter(df_withtop_10_1, x='Distance_miles', y='price_num', color='neighbourhood_cleansed', 
+                 hover_data={'Distance_miles': True, 'price_num': True, 'neighbourhood_cleansed': True},
+                 labels={"neighbourhood_cleansed":"Neighbourhood"})
+
+# Update layout to customize the tooltip display
+fig.update_traces(marker=dict(size=3),
+                  selector=dict(mode='markers'))
+fig.add_trace(px.line(x=df_withtop_10_1['Distance_miles'], y=predictions, title='Overall Trend').data[0])
+fig.data[-1].line.color = 'black'
+fig.update_xaxes(title_text='Distance from the National Monument (Miles)')
+fig.update_yaxes(title_text='Price')
+fig.update_layout(legend=dict(itemwidth=30,font=dict(size=5)),
+                  title='Price of Airbnbs by How Far the Airbnbs are from the National Monument')
+
+# Show the plot
+fig.show()
+
+```
+
+### Conclusion
+
+Our analysis showed a clear trend: as the distance from the Washington Monument increases, average Airbnb prices generally decrease. This indicates that being closer to this landmark might have a notable influence on rental pricing. We illustrated this relationship with a single plot that combined data from all neighborhoods, clearly displaying a price threshold for each distance category from the monument.
+
+As a tourist, keep in mind that if you prefer to be close to popular attractions, you might encounter higher prices. However, if you're on a tight budget, it's advisable to steer clear of the central areas of Washington, D.C.
+
+# 5. Population Density in Top Booked Neighborhoods
+
+Understanding population density can provide insights into the liveliness and accessibility of different areas within a city. In this analysis, we examine population density across various wards in Washington D.C., focusing on the top ten neighborhoods most frequently booked within a 60 days period.
 
 ```{python}
 # df with only the top ten
-
 
 neighbourhood_taken_60_sum = df.groupby('neighbourhood_cleansed')['taken_60'].sum().sort_values(ascending=False)
 
@@ -347,40 +565,12 @@ dc_wards = gpd.read_file("ACS_Demographic_Characteristics_DC_Ward.geojson")[
 ]
 ```
 
-
-### Top 10 Neighbourhoods by Total Days Booked in 60 Days
-
-```{python}
-import matplotlib.pyplot as plt
-plt.figure(figsize=(8, 6))
-ax = sns.barplot(x=neighbourhood_taken_60_sum.head(10).index, y=neighbourhood_taken_60_sum.head(10).values, palette="Blues_d")
-plt.title('Top 10 Neighbourhoods by Total Days Booked in 60 Days')
-plt.xlabel('Neighbourhood')
-plt.ylabel('Total Days Booked')
-plt.xticks(rotation=45)
-plt.grid(True, linestyle='--', alpha=0.6)
-sns.despine()
-
-for p in ax.patches:
-    ax.annotate(format(p.get_height(), '.1f'), 
-                   (p.get_x() + p.get_width() / 2., p.get_height()), 
-                   ha = 'center', va = 'center', 
-                   xytext = (0, 9), 
-                   textcoords = 'offset points')
-plt.tight_layout()
-plt.show()
-```
-
-This plot provides a visual comparison of the total days booked in the top 10 neighborhoods over the past 60 days. The bar chart ranks neighborhoods according to their booking totals, helping to identify the most popular areas. The visualization also indicates how much more some neighborhoods are preferred over others. This popularity could be influenced by factors such as proximity to tourist attractions, overall safety, or availability of public transport.
-
-### Relationship Between Top Booked Neighbourhoods and Population Density
-
 ```{python}
 import pandas as pd
 import folium
 import json
 from folium import Icon
-
+import matplotlib.pyplot as plt
 
 dc_wards['Population_Density'] = dc_wards['DP05_0001E'] / dc_wards.geometry.area
 m = folium.Map(location=[38.9072, -77.0369], zoom_start=12, tiles='cartodbpositron')  # Changed tiles here
@@ -397,7 +587,7 @@ choropleth = folium.Choropleth(
 ).add_to(m)
 
 neighbourhood_data = df_withtop_10.groupby('neighbourhood_cleansed').agg({
-    'price_num': 'mean',
+    'price_num': 'median',
     'average_review_score':'mean',
     'latitude': 'mean',
     'longitude': 'mean'
@@ -423,203 +613,109 @@ for index, row in neighbourhood_data.iterrows():
 m
 ```
 
-This plot leverages a choropleth map to show population density across different wards in DC, with overlays of markers indicating average price and ratings in the top booked neighborhoods. The map reveals any correlation between population density and booking frequency. High population density might suggest more local amenities and better connectivity, which could appeal to Airbnb users.
-
-### Relationship Between Top 10 Booked Neighbourhoods and Median Price
-
-```{python}
-import pandas as pd
-import plotly.graph_objects as go
-
-
-fig = px.choropleth_mapbox(
-    merged_gdf,
-    geojson=geojson_dict,
-    locations='neighbourhood_cleansed',  
-    featureidkey='properties.neighbourhood_cleansed',  
-    color='price_num',  
-    color_continuous_scale="tealrose",  
-    mapbox_style="carto-positron",  
-    zoom=10,  
-    center={"lat": 38.9, "lon": -77.03}, 
-    opacity=0.5,  
-    labels={'neighbourhood_cleansed':'Area','price_num': 'Average Price',}, 
-    hover_data={
-        'neighbourhood_cleansed': True,
-        'price_num': ':.2f',  
-    }
-)
-fig.update_traces(
-    hovertemplate=(
-        "<b>%{customdata[0]}</b><br>"
-        "<span style='font-size:0.9em;'>Average Price:</span> "
-        "<span style='font-size:0.9em;'><b>$%{customdata[1]:.2f}</b></span><br>"
-    )
-)
-
-fig.add_trace(
-    go.Scattermapbox(
-        lat=neighbourhood_data['latitude'],
-        lon=neighbourhood_data['longitude'],
-        mode='markers',
-        marker=go.scattermapbox.Marker(
-            size=9,
-            color='black',
-            opacity=0.7
-        ),
-        text=neighbourhood_data.apply(lambda row: f"{row['neighbourhood_cleansed']}<br>Avg. Price: ${round(row['price_num'], 2)}", axis=1),
-        hoverinfo='text'
-    )
-    
-)
-
-fig.update_layout(
-    hoverlabel=dict(
-        font=dict(family="Courier New, monospace", size=12),
-        bordercolor='pink',
-        bgcolor='white'
-    ),
-    title='Average Airbnb Price and Review by Neighborhood in DC',
-    margin={"r": 0, "t": 0, "l": 0, "b": 0},
-    clickmode='event+select'
-)
-
-fig.show()
-```
-
-This plot combines a choropleth map and scatter markers to illustrate the median price of Airbnbs in each of the top neighborhoods. This visualization helps to assess whether price plays a significant role in the popularity of certain areas. For instance, neighborhoods that offer a good balance between cost and amenities might see higher booking rates.
-
-### Relationship Between Top 10 Booked Neighbourhoods and Average Rating
-
-```{python}
-import pandas as pd
-import plotly.graph_objects as go
-
-fig = px.choropleth_mapbox(
-    merged_gdf,
-    geojson=geojson_dict,
-    locations='neighbourhood_cleansed',  
-    featureidkey='properties.neighbourhood_cleansed',  
-    color='average_review_score',  
-    color_continuous_scale="tealrose",  
-    mapbox_style="carto-positron",  
-    zoom=10,  
-    center={"lat": 38.9, "lon": -77.03}, 
-    opacity=0.5,  
-    labels={'neighbourhood_cleansed':'Area','average_review_score':'Average rating'}, 
-    hover_data={
-        'neighbourhood_cleansed': True,
-        'average_review_score': ':.2f'  
-    }
-)
-fig.update_traces(
-    hovertemplate=(
-        "<b>%{customdata[0]}</b><br>"
-        "<span style='font-size:0.9em;'>Average Rating:</span> "
-        "<span style='font-size:0.9em;'><b>%{customdata[1]:.2f}</b></span>"
-    )
-)
-
-fig.add_trace(
-    go.Scattermapbox(
-        lat=neighbourhood_data['latitude'],
-        lon=neighbourhood_data['longitude'],
-        mode='markers',
-        marker=go.scattermapbox.Marker(
-            size=9,
-            color='black',
-            opacity=0.7
-        ),
-        text=neighbourhood_data.apply(lambda row: f"{row['neighbourhood_cleansed']}<br>Avg. Rating: {round(row['average_review_score'], 2)}", axis=1),
-        hoverinfo='text'
-    )
-    
-)
-
-fig.update_layout(
-    hoverlabel=dict(
-        font=dict(family="Courier New, monospace", size=12),
-        bordercolor='pink',
-        bgcolor='white'
-    ),
-    title='Average Airbnb Price and Review by Neighborhood in DC',
-    margin={"r": 0, "t": 0, "l": 0, "b": 0},
-    clickmode='event+select'
-)
-
-fig.show()
-```
-
-Similar to the previous plot, this map integrates a choropleth display with marker overlays but focuses on average review scores instead of prices. High review scores can be a strong indicator of customer satisfaction and can significantly influence booking decisions. This plot helps to understand if there's a strong correlation between the quality of stay (as reflected in reviews) and booking volumes.
-
 ### Conclusion
 
-After reviewing the data and visualizations concerning Airbnb bookings in Washington D.C. over the last 60 days, it appears that guests prioritize staying in areas with higher population density and more affordable prices. These factors seem to outweigh the importance of average ratings in influencing booking decisions. This trend suggests that visitors value convenience and cost-effectiveness, possibly due to better access to amenities and transport options in denser, more affordable areas, over the perceived quality or reviews of the listings.
+Our analysis suggests that areas with higher population density, typically located in the center of D.C., are more likely to attract Airbnb bookings. This trend could be attributed to the abundance of local amenities and better connectivity in densely populated regions. However, it's essential to note that while these central areas may be desirable for their accessibility, they also tend to have higher prices, as evidenced by our previous analyses.
+
+Interestingly, our examination of the top booked neighborhoods reveals four distinct areas with lower prices compared to the center of D.C. This indicates that while population density plays a role in booking frequency, other factors such as pricing can influence traveler preferences. As such, travelers may consider these alternative neighborhoods to find accommodations that offer both affordability and convenience.
 
 
-# What Hosts Want People to Know About Their Listings
+# Final Decision Making: Finding the Perfect Airbnb
 
-In an effort to better understand how hosts describe their offerings on our platform, we've analyzed the 'About' sections from various listings. By extracting key terms and phrases from these descriptions, we've created a visual representation through a word cloud. This visualization highlights the most frequently mentioned features and attributes, giving us a clearer picture of what hosts believe are the most appealing aspects of their properties.
+After analyzing various factors influencing Airbnb preferences, we're equipped with valuable insights to guide our final decision-making process. In this concluding section, we present a comprehensive visualization that encapsulates the ideal Airbnb options, tailored to meet diverse traveler needs. 
+
+Based on our past analyses, we've identified a few key factors that play a significant role in shaping Airbnb preference:
+
+- Price: Affordability remains a crucial consideration for travelers seeking value for their money.
+  
+- Rating: The overall satisfaction of previous guests, reflected in review scores, serves as a reliable indicator of accommodation quality.
+  
+- Amenities: Factors such as the number of bathrooms and accommodates contribute to the comfort and convenience of a stay.
+- 
+- Location: Proximity to landmarks, such as the National Monument, and population density offer insights into neighborhood vibrancy and accessibility.
+
+We've picked out a selection of Airbnb listings that best align with our criteria, filtering for accommodations that offer competitive pricing, high ratings, ample amenities, and favorable locations.
+
+```{python}
+temp = df_1.reset_index()
+```
+
+```{python}
+index = []
+unique_neigh = temp['neighbourhood_cleansed'].unique()
+for i in unique_neigh:
+    tem = temp[temp['neighbourhood_cleansed'] == i]
+    avg_rev = tem.groupby(['neighbourhood_cleansed'])['review_scores_location'].mean().values[0]
+    avg_price = tem.groupby(['neighbourhood_cleansed'])['price_num'].mean().values[0]
+    avg_bath = tem.groupby(['neighbourhood_cleansed'])['bathroom_num'].mean().values[0]
+
+    tem = tem[(tem['review_scores_location'] > avg_rev) & (tem['price_num'] < avg_price) &(tem['bathroom_num'] > avg_bath)]
+
+    index.extend(tem['index'])
+```
+
+```{python}
+curation = temp[temp['index'].isin(index)]
+```
+
+```{python}
+neighbourhood_data = df.groupby('neighbourhood_cleansed').agg({
+    'price_num': 'median',
+    'review_scores_location':'mean'
+}).reset_index()
+# Read the data
+dc_wards = gpd.read_file("neighbourhoods.geojson")
+dc_wards['color'] = 1
+dc_wards['neighbourhood_cleansed'] = dc_wards['neighbourhood']
+neighbourhood_price = temp.groupby(['neighbourhood_cleansed'])['price_num'].mean().reset_index()
+test = pd.merge(dc_wards,neighbourhood_price,on='neighbourhood_cleansed')
+```
 
 ```{python}
 import pandas as pd
-import numpy as np
-from wordcloud import WordCloud
-import matplotlib.pyplot as plt
-import string
-from PIL import Image
-from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
-from collections import Counter
-from nltk.corpus import stopwords
-import nltk
+import folium
+import json
+from folium import Icon
+m = folium.Map(location=[38.9072, -77.0369], zoom_start=12, tiles='cartodbpositron')  # Changed tiles here
+
+choropleth = folium.Choropleth(
+    geo_data=test,
+    data=test,
+    columns=['neighbourhood_cleansed','price_num'],
+    key_on='feature.properties.neighbourhood',
+    fill_color='YlGn',
+    fill_opacity=0.7,
+    line_opacity=0.2,
+    legend_name='Population Density in DC'
+).add_to(m)
 
 
-host_about_text = df['host_about'].dropna()
-combined_text = " ".join(host_about_text)
+for index, row in curation.iterrows():
+    popup_html = f"""
+    <div style="width:200px;">
+        <strong>{row['neighbourhood_cleansed']}</strong><br>
+        Average price: ${round(row['price_num'], 2)}<br>
+        Average rating: {round(row['review_scores_location'], 2)}
+    </div>
+    """
+    tooltip_html = f"""
+    <div style="width:200px;">
+        <strong>{row['neighbourhood_cleansed']}</strong><br>
+        Bathrooms: {row['bathroom_num']}<br>
+        Price: ${round(row['price_num'], 2)}<br>
+        Review Score: {row['review_scores_location']}
+    </div>
+    """
+    folium.Marker(
+        [row['latitude'], row['longitude']],
+        popup=folium.Popup(popup_html, max_width=265),
+        tooltip=tooltip_html,  # Modified tooltip content
+        icon=Icon(color='blue', icon='info-sign')
+    ).add_to(m)
 
-# Removing punctuation
-translator = str.maketrans('', '', string.punctuation)
-text_no_punctuation = combined_text.translate(translator)
-nltk.download('stopwords')
 
-# Set of English stopwords
-stop_words = set(stopwords.words('english'))
-# Manually defining a basic set of English stopwords
-# basic_stopwords = set([
-#    "i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours",
-#    "yourself", "yourselves", "he", "him", "his", "himself", "she", "her", "hers",
-#    "herself", "it", "its", "itself", "they", "them", "their", "theirs", "themselves",
-#    "what", "which", "who", "whom", "this", "that", "these", "those", "am", "is", "are",
-#    "was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does",
-#    "did", "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until",
-#    "while", "of", "at", "by", "for", "with", "about", "against", "between", "into",
-#    "through", "during", "before", "after", "above", "below", "to", "from", "up", "down",
-#    "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here",
-#    "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more",
-#    "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so",
-#    "than", "too", "very", "s", "t", "can", "will", "just", "don", "should", "now","washington","dc","you'll"
-#])
-
-# Remove basic stopwords
-text_no_basic_stopwords = ' '.join([word for word in text_no_punctuation.lower().split() if word not in stop_words])
-mask = np.array(Image.open("comment.png"))
-# Generate the word cloud with the simplified stopword set
-wordcloud = WordCloud(width = 800, height = 800, 
-                background_color ='white', 
-                stopwords = stop_words, 
-                min_font_size = 10,mask=mask).generate(text_no_basic_stopwords)
-
-# Display the word cloud
-plt.figure(figsize = (7, 7), facecolor = None) 
-plt.imshow(wordcloud) 
-plt.axis("off") 
-plt.tight_layout(pad = 0) 
-plt.show()
+# Display the map
+m
 ```
 
-#### Conclusion
-
-The word cloud generated from the host descriptions really captures what’s valued most in rental listings, with "Washington DC" being a standout. For sure the hosts want people to know where they are. Also, the word "love" popping up frequently suggests that hosts really put heart into their properties, want to create a warm  atmosphere.
-
-Phrases like "fully equipped" and "thoughtfully designed" shine through too, indicating that hosts strive to offer more than just the basics. These terms likely refer to amenities like well stocked kitchens and pleasing decor, crucial for travelers who want a "home away from home." The mention of "travel" ties directly to the guest's needs, hinting that hosts think about what conveniences will make travel smoother.
-
+# Check out the "Factor Analysis" tab for more interesting insights!
